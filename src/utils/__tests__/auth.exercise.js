@@ -1,21 +1,43 @@
 // Testing Pure Functions
 
-// 💣 remove this todo test (it's only here so you don't get an error about missing tests)
-test.todo('remove me')
+import {isPasswordAllowed} from 'utils/auth'
+import cases from 'jest-in-case'
 
-// 🐨 import the function that we're testing
-// 💰 import {isPasswordAllowed} from '../auth'
+cases(
+  'valid passwords',
+  opts => {
+    expect(isPasswordAllowed(opts.password)).toBe(true)
+  },
+  {
+    'fulfills all requirements': {
+      password: 'aBc123!',
+    },
+  },
+)
 
-// 🐨 write tests for valid and invalid passwords
-// 💰 here are some you can use:
-//
-// valid:
-// - !aBc123
-//
-// invalid:
-// - a2c! // too short
-// - 123456! // no alphabet characters
-// - ABCdef! // no numbers
-// - abc123! // no uppercase letters
-// - ABC123! // no lowercase letters
-// - ABCdef123 // no non-alphanumeric characters
+cases(
+  'invalid passwords',
+  opts => {
+    expect(isPasswordAllowed(opts.password)).toBe(false)
+  },
+  {
+    'too short': {
+      password: 'aB2c!',
+    },
+    'no alphabet characters': {
+      password: '123456!',
+    },
+    'no numeric characters': {
+      password: 'ABCdef!',
+    },
+    'no uppercase letters': {
+      password: 'abc123!',
+    },
+    'no lowercase letters': {
+      password: 'ABC123!',
+    },
+    'no non-alphanumeric characters': {
+      password: 'ABCdef123',
+    },
+  },
+)
