@@ -1,16 +1,49 @@
 // Testing Middleware
 
-// 💣 remove this todo test (it's only here so you don't get an error about missing tests)
-test.todo('remove me')
+import {UnauthorizedError} from 'express-jwt'
+import errorMiddleware from 'utils/error-middleware'
+import {buildNext, buildReq, buildRes} from 'utils/generate'
 
-// 🐨 you'll need both of these:
-// import {UnauthorizedError} from 'express-jwt'
-// import errorMiddleware from '../error-middleware'
+test('unauthorized error responds with JSON and 401 status code', () => {
+  const error = new UnauthorizedError('some_error_code', {message: 'Some message'})
+  const req = buildReq()
+  const res = buildRes()
+  const next = buildNext()
 
-// 🐨 Write a test for the UnauthorizedError case
-// 💰 const error = new UnauthorizedError('some_error_code', {message: 'Some message'})
-// 💰 const res = {json: jest.fn(() => res), status: jest.fn(() => res)}
+  errorMiddleware(error, req, res, next)
 
-// 🐨 Write a test for the headersSent case
+  const expectedJson = {code: error.code, message: error.message}
+  expect(next).not.toHaveBeenCalled()
+  expect(res.json).toHaveBeenCalledTimes(1)
+  expect(res.json).toHaveBeenCalledWith(expectedJson)
+  expect(res.status).toHaveBeenCalledTimes(1)
+  expect(res.status).toHaveBeenCalledWith(401)
+})
 
-// 🐨 Write a test for the else case (responds with a 500)
+test('if headers are sent, error is passed to the next handler', () => {
+  const error = new Error('some error')
+  const req = buildReq()
+  const res = buildRes({headersSent: true})
+  const next = buildNext()
+
+  errorMiddleware(error, req, res, next)
+
+  expect(next).toHaveBeenCalledTimes(1)
+  expect(next).toHaveBeenCalledWith(error)
+})
+
+test('in any other case respond with a 500 status code', () => {
+  const error = new Error('some error')
+  const req = buildReq()
+  const res = buildRes()
+  const next = buildNext()
+
+  errorMiddleware(error, req, res, next)
+
+  const expectedJson = {message: error.message, stack: error.stack}
+  expect(next).not.toHaveBeenCalled()
+  expect(res.status).toHaveBeenCalledTimes(1)
+  expect(res.status).toHaveBeenCalledWith(500)
+  expect(res.json).toHaveBeenCalledTimes(1)
+  expect(res.json).toHaveBeenCalledWith(expectedJson)
+})

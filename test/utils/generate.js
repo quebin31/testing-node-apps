@@ -1,5 +1,5 @@
 import faker from 'faker'
-import {getUserToken, getSaltAndHash} from '../../src/utils/auth'
+import {getSaltAndHash, getUserToken} from '../../src/utils/auth'
 
 // passwords must have at least these kinds of characters to be valid, so we'll
 // prefex all of the ones we generate with `!0_Oo` to ensure it's valid.
@@ -63,8 +63,7 @@ function loginForm(overrides) {
 }
 
 function buildReq({user = buildUser(), ...overrides} = {}) {
-  const req = {user, body: {}, params: {}, ...overrides}
-  return req
+  return {user, body: {}, params: {}, ...overrides}
 }
 
 function buildRes(overrides = {}) {
