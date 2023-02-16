@@ -60,10 +60,12 @@ test('listItem CRUD', async () => {
   const deleteResponse = await client.delete(listItemIdUrl)
   expect(deleteResponse.data).toEqual({success: true})
 
-  // FAILED READ
   const error = await client.get(listItemIdUrl).catch(resolve)
   expect(error.status).toBe(404)
-  expect(error.data.message).toBeDefined()
+  const withoutId = error.data.message.replace(listItem.id, 'list-item-id')
+  expect(withoutId).toMatchInlineSnapshot(
+    `"No list item was found with the id of list-item-id"`,
+  )
 })
 
 /* eslint no-unused-vars:0 */
