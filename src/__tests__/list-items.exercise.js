@@ -1,8 +1,8 @@
 // Testing CRUD API Routes
 
 import axios from 'axios'
-import {resetDb, insertTestUser} from 'utils/db-utils'
-import {getData, handleRequestFailure, resolve} from 'utils/async'
+import {insertTestUser, resetDb} from 'utils/db-utils'
+import {handleRequestFailure, resolve} from 'utils/async'
 import * as generate from 'utils/generate'
 import * as booksDB from '../db/books'
 import startServer from '../start'
@@ -14,58 +14,56 @@ beforeAll(async () => {
   baseURL = `http://localhost:${server.address().port}/api`
 })
 
-afterAll(() => server.close())
+afterAll(async () => {
+  await server.close()
+})
 
-beforeEach(() => resetDb())
+beforeEach(async () => {
+  await resetDb()
+})
 
 async function setup() {
   // 💰 this bit isn't as important as the rest of what you'll be learning today
   // so I'm going to give it to you, but don't just skip over it. Try to figure
   // out what's going on here.
   const testUser = await insertTestUser()
-  const authAPI = axios.create({baseURL})
-  authAPI.defaults.headers.common.authorization = `Bearer ${testUser.token}`
-  authAPI.interceptors.response.use(getData, handleRequestFailure)
-  return {testUser, authAPI}
+  const client = axios.create({baseURL})
+  client.defaults.headers.common.authorization = `Bearer ${testUser.token}`
+  client.interceptors.response.use(resolve, handleRequestFailure)
+  return {testUser, client}
 }
 
 test('listItem CRUD', async () => {
-  const {testUser, authAPI} = await setup()
+  const {testUser, client} = await setup()
 
-  // 🐨 create a book object and insert it into the database
-  // 💰 use generate.buildBook and await booksDB.insert
+  const book = generate.buildBook()
+  await booksDB.insert(book)
 
   // CREATE
-  // 🐨 create a new list-item by posting to the list-items endpoint with a bookId
-  // 💰 the data you send should be: {bookId: book.id}
+  const createResponse = await client.post('list-items', {bookId: book.id})
+  const listItem = createResponse.data.listItem
+  expect(listItem).toMatchObject({ownerId: testUser.id, bookId: book.id})
 
-  // 🐨 assert that the data you get back is correct
-  // 💰 it should have an ownerId (testUser.id) and a bookId (book.id)
-  // 💰 if you don't want to assert on all the other properties, you can use
-  // toMatchObject: https://jestjs.io/docs/en/expect#tomatchobjectobject
-
-  // 💰 you might find this useful for the future requests:
-  // const listItemId = cData.listItem.id
-  // const listItemIdUrl = `list-items/${listItemId}`
+  const listItemIdUrl = `list-items/${listItem.id}`
 
   // READ
-  // 🐨 make a GET to the `listItemIdUrl`
-  // 🐨 assert that this returns the same thing you got when you created the list item
+  const getItemResponse = await client.get(listItemIdUrl)
+  expect(getItemResponse.data.listItem).toEqual(listItem)
 
   // UPDATE
-  // 🐨 make a PUT request to the `listItemIdUrl` with some updates
-  // 💰 const updates = {notes: generate.notes()}
-  // 🐨 assert that this returns the right stuff (should be the same as the READ except with the updated notes)
+  const updates = {notes: generate.notes()}
+  const receivedUpdate = await client.put(listItemIdUrl, updates)
+  const expectedUpdate = {...listItem, ...updates}
+  expect(receivedUpdate.data.listItem).toEqual(expectedUpdate)
 
   // DELETE
-  // 🐨 make a DELETE request to the `listItemIdUrl`
-  // 🐨 assert that this returns the right stuff (💰 {success: true})
+  const deleteResponse = await client.delete(listItemIdUrl)
+  expect(deleteResponse.data).toEqual({success: true})
 
-  // 🐨 try to make a GET request to the `listItemIdUrl` again.
-  // 💰 this promise should reject. You can do a try/catch if you want, or you
-  // can use the `resolve` utility from utils/async:
-  // 💰 const error = await authAPI.get(listItemIdUrl).catch(resolve)
-  // 🐨 assert that the status is 404 and the error.data is correct
+  // FAILED READ
+  const error = await client.get(listItemIdUrl).catch(resolve)
+  expect(error.status).toBe(404)
+  expect(error.data.message).toBeDefined()
 })
 
 /* eslint no-unused-vars:0 */
